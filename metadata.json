@@ -1,0 +1,6 @@
+{
+  "name": "Geladinhos Gourmet - Catálogo & Pedidos WhatsApp",
+  "description": "Loja virtual de geladinhos gourmet artesanais com catálogo interativo de sabores, controle de estoque com baixa automática em pedidos, personalização de kits promocionais, gerenciador completo de cardápio, módulo avançado de gerenciamento de pedidos (Kanban, status em tempo real, notificações via WhatsApp, entregas e exportação CSV), impressão térmica de cupons (80mm/58mm) e envio de pedidos para o WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
