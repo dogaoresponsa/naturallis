@@ -1,9 +1,10 @@
 import React from 'react';
 import { Search, X, SlidersHorizontal, Sparkles, Check, ArrowUpDown } from 'lucide-react';
-import { ProductCategory } from '../types';
+import { ProductCategory, CategoryItem } from '../types';
 import { CATEGORIES_DATA } from '../data/products';
 
 interface CategoryFilterProps {
+  categories?: CategoryItem[];
   activeCategory: ProductCategory;
   onSelectCategory: (category: ProductCategory) => void;
   searchQuery: string;
@@ -26,6 +27,7 @@ const QUICK_TAGS = [
 ];
 
 export const CategoryFilter: React.FC<CategoryFilterProps> = ({
+  categories = CATEGORIES_DATA,
   activeCategory,
   onSelectCategory,
   searchQuery,
@@ -37,6 +39,15 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
   categoryCounts,
   totalResultsCount,
 }) => {
+  // Ensure "todos" is present as the first category item
+  const displayCategories = React.useMemo(() => {
+    const list = [...categories];
+    if (!list.some(c => c.id === 'todos')) {
+      list.unshift({ id: 'todos', label: 'Todos os Sabores' });
+    }
+    return list;
+  }, [categories]);
+
   return (
     <div id="secao-catalogo" className="pt-6 pb-4 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto scroll-mt-20">
       {/* Title & Section intro */}
@@ -120,7 +131,7 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
 
       {/* Category Pills (Horizontal Scrollable) */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-        {CATEGORIES_DATA.map((cat) => {
+        {displayCategories.map((cat) => {
           const isActive = activeCategory === cat.id;
           const count = cat.id === 'todos' 
             ? Object.values(categoryCounts).reduce<number>((a, b) => a + Number(b), 0)

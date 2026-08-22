@@ -1,14 +1,16 @@
-import { GeladinhoProduct, PromoCombo, NeighborhoodFee, StoreSettings, CustomerReview } from '../types';
+import { GeladinhoProduct, PromoCombo, NeighborhoodFee, StoreSettings, CustomerReview, CategoryItem } from '../types';
 
-export const CATEGORIES_DATA = [
-  { id: 'todos', label: 'Todos os Sabores', icon: 'Sparkles', color: 'from-amber-500 to-rose-500' },
-  { id: 'chocolatudos', label: 'Chocolatudos', icon: 'Cookie', color: 'from-amber-800 to-amber-950' },
-  { id: 'frutas-ninho', label: 'Frutas com Ninho', icon: 'Strawberry', color: 'from-rose-500 to-pink-500' },
-  { id: 'premium-especiais', label: 'Linha Gourmet Premium', icon: 'Crown', color: 'from-amber-600 to-yellow-500' },
-  { id: 'classicos-cremosos', label: 'Clássicos Cremosos', icon: 'Milk', color: 'from-amber-400 to-orange-400' },
-  { id: 'fit-zero', label: 'Fit & Zero Açúcar', icon: 'Leaf', color: 'from-emerald-500 to-teal-600' },
-  { id: 'alcoolicos', label: 'Drinks & Alcoólicos (18+)', icon: 'Wine', color: 'from-purple-600 to-indigo-600' },
+export const DEFAULT_CATEGORIES_DATA: CategoryItem[] = [
+  { id: 'todos', label: 'Todos os Sabores', icon: 'Sparkles', color: 'from-amber-500 to-rose-500', description: 'Todos os geladinhos do cardápio' },
+  { id: 'chocolatudos', label: 'Chocolatudos', icon: 'Cookie', color: 'from-amber-800 to-amber-950', description: 'Muitos chocolates, brigadeiros e trufas' },
+  { id: 'frutas-ninho', label: 'Frutas com Ninho', icon: 'Strawberry', color: 'from-rose-500 to-pink-500', description: 'Geleias artesanais de frutas com Leite Ninho' },
+  { id: 'premium-especiais', label: 'Linha Gourmet Premium', icon: 'Crown', color: 'from-amber-600 to-yellow-500', description: 'Ingredientes nobres como pistache, avelã e ferrero' },
+  { id: 'classicos-cremosos', label: 'Clássicos Cremosos', icon: 'Milk', color: 'from-amber-400 to-orange-400', description: 'Receitas tradicionais com cremosidade sem igual' },
+  { id: 'fit-zero', label: 'Fit & Zero Açúcar', icon: 'Leaf', color: 'from-emerald-500 to-teal-600', description: 'Sem adição de açúcar e 100% da fruta' },
+  { id: 'alcoolicos', label: 'Drinks & Alcoólicos (18+)', icon: 'Wine', color: 'from-purple-600 to-indigo-600', description: 'Receitas exclusivas de drinks para maiores de 18 anos' },
 ];
+
+export const CATEGORIES_DATA = DEFAULT_CATEGORIES_DATA;
 
 export const PRODUCTS_DATA: GeladinhoProduct[] = [
   {

@@ -3,10 +3,11 @@ import {
   X, Plus, Edit2, Trash2, Copy, Check, Search, Sparkles, 
   RotateCcw, Package, AlertCircle, Eye, EyeOff, Tag, Image as ImageIcon,
   DollarSign, ArrowUpDown, Filter, BarChart3, Download, Upload, CheckCircle2,
-  Boxes, TrendingDown, Minus, History, Layers
+  Boxes, TrendingDown, Minus, History, Layers, ArrowUp, ArrowDown, FolderTree,
+  Palette, Info
 } from 'lucide-react';
-import { GeladinhoProduct, PromoCombo, ProductCategory, StockMovement } from '../types';
-import { CATEGORIES_DATA, PRODUCTS_DATA, PROMO_COMBOS_DATA } from '../data/products';
+import { GeladinhoProduct, PromoCombo, ProductCategory, StockMovement, CategoryItem } from '../types';
+import { DEFAULT_CATEGORIES_DATA, CATEGORIES_DATA, PRODUCTS_DATA, PROMO_COMBOS_DATA } from '../data/products';
 import { formatCurrency } from '../utils/whatsapp';
 
 interface MenuManagerModalProps {
@@ -14,6 +15,7 @@ interface MenuManagerModalProps {
   onClose: () => void;
   products: GeladinhoProduct[];
   combos: PromoCombo[];
+  categories?: CategoryItem[];
   stockMovements?: StockMovement[];
   onSaveProduct: (product: GeladinhoProduct) => void;
   onDeleteProduct: (productId: string) => void;
@@ -27,9 +29,27 @@ interface MenuManagerModalProps {
   onSaveCombo: (combo: PromoCombo) => void;
   onDeleteCombo: (comboId: string) => void;
   onDuplicateCombo: (combo: PromoCombo) => void;
+  onSaveCategory?: (category: CategoryItem) => void;
+  onDeleteCategory?: (categoryId: string, reassignTo?: string) => void;
+  onReorderCategories?: (categories: CategoryItem[]) => void;
   onResetToDefaults: () => void;
-  onImportCatalog: (data: { products: GeladinhoProduct[]; combos: PromoCombo[] }) => void;
+  onImportCatalog: (data: { products: GeladinhoProduct[]; combos: PromoCombo[]; categories?: CategoryItem[] }) => void;
 }
+
+const PRESET_CATEGORY_ICONS = [
+  '🍓', '🍫', '🥛', '👑', '🌿', '🍸', '🍍', '🍪', '🥥', '⭐', '🍦', '🍋', '🍇', '🥭', '🍰', '🍉', '🥜', '☕', '🧁', '🍯'
+];
+
+const PRESET_CATEGORY_COLORS = [
+  { label: 'Rosa Frutas', value: 'from-rose-500 to-pink-500', bg: 'bg-rose-500' },
+  { label: 'Chocolate', value: 'from-amber-800 to-amber-950', bg: 'bg-amber-900' },
+  { label: 'Dourado Gourmet', value: 'from-amber-600 to-yellow-500', bg: 'bg-amber-500' },
+  { label: 'Laranja Cremoso', value: 'from-amber-400 to-orange-400', bg: 'bg-orange-400' },
+  { label: 'Verde Fit & Zero', value: 'from-emerald-500 to-teal-600', bg: 'bg-emerald-500' },
+  { label: 'Roxo Alcoólicos', value: 'from-purple-600 to-indigo-600', bg: 'bg-purple-600' },
+  { label: 'Azul Tropical', value: 'from-blue-500 to-cyan-500', bg: 'bg-blue-500' },
+  { label: 'Vermelho Paixão', value: 'from-red-500 to-rose-600', bg: 'bg-red-500' },
+];
 
 const PRESET_IMAGES = [
   { label: 'Ninho & Nutella', url: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=600&q=80' },
@@ -64,6 +84,7 @@ export const MenuManagerModal: React.FC<MenuManagerModalProps> = ({
   onClose,
   products,
   combos,
+  categories = DEFAULT_CATEGORIES_DATA,
   stockMovements = [],
   onSaveProduct,
   onDeleteProduct,
@@ -77,10 +98,13 @@ export const MenuManagerModal: React.FC<MenuManagerModalProps> = ({
   onSaveCombo,
   onDeleteCombo,
   onDuplicateCombo,
+  onSaveCategory,
+  onDeleteCategory,
+  onReorderCategories,
   onResetToDefaults,
   onImportCatalog,
 }) => {
-  const [activeTab, setActiveTab] = useState<'sabores' | 'combos' | 'estoque' | 'metricas' | 'backup'>('sabores');
+  const [activeTab, setActiveTab] = useState<'sabores' | 'categorias' | 'combos' | 'estoque' | 'metricas' | 'backup'>('sabores');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('todos');
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'soldout'>('all');
@@ -92,6 +116,13 @@ export const MenuManagerModal: React.FC<MenuManagerModalProps> = ({
 
   const [editingCombo, setEditingCombo] = useState<PromoCombo | null>(null);
   const [isNewCombo, setIsNewCombo] = useState(false);
+
+  // Category editing states
+  const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
+  const [isNewCategory, setIsNewCategory] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<CategoryItem | null>(null);
+  const [reassignTargetCategory, setReassignTargetCategory] = useState<string>('');
+  const [isQuickCategoryModalOpen, setIsQuickCategoryModalOpen] = useState(false);
 
   // Deletion and reset confirmation modals
   const [productToDelete, setProductToDelete] = useState<GeladinhoProduct | null>(null);
@@ -186,12 +217,74 @@ export const MenuManagerModal: React.FC<MenuManagerModalProps> = ({
 
   if (!isOpen) return null;
 
+  // New category factory
+  const handleOpenNewCategory = () => {
+    const newCat: CategoryItem = {
+      id: `categoria-${Date.now()}`,
+      label: '',
+      icon: '⭐',
+      color: 'from-rose-500 to-pink-500',
+      description: '',
+    };
+    setEditingCategory(newCat);
+    setIsNewCategory(true);
+  };
+
+  const handleSaveCategoryForm = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategory) return;
+    if (!editingCategory.label.trim()) {
+      alert('Por favor, informe o nome da categoria.');
+      return;
+    }
+
+    const cleanId = (editingCategory.id || '')
+      .toLowerCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9-_]/g, '-');
+
+    const catToSave: CategoryItem = {
+      ...editingCategory,
+      id: cleanId || `cat-${Date.now()}`,
+      label: editingCategory.label.trim(),
+      description: editingCategory.description?.trim() || undefined,
+    };
+
+    if (onSaveCategory) {
+      onSaveCategory(catToSave);
+      showToast(isNewCategory ? 'Nova categoria criada!' : 'Categoria atualizada!');
+    }
+
+    setEditingCategory(null);
+    setIsNewCategory(false);
+  };
+
+  const handleMoveCategory = (index: number, direction: 'up' | 'down') => {
+    if (!onReorderCategories) return;
+    const editableCats = categories.filter((c) => c.id !== 'todos');
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= editableCats.length) return;
+
+    const newArr = [...editableCats];
+    const temp = newArr[index];
+    newArr[index] = newArr[targetIndex];
+    newArr[targetIndex] = temp;
+
+    // Prepend 'todos' if existed
+    const todosItem = categories.find((c) => c.id === 'todos') || { id: 'todos', label: 'Todos os Sabores' };
+    onReorderCategories([todosItem, ...newArr]);
+    showToast('Ordem das categorias atualizada!');
+  };
+
   // New product factory
   const handleOpenNewProduct = () => {
+    const firstCat = categories.find((c) => c.id !== 'todos')?.id || 'geral';
     const newProd: GeladinhoProduct = {
       id: `sabor-${Date.now()}`,
       name: '',
-      category: 'frutas-ninho',
+      category: firstCat,
       tagline: '',
       description: '',
       price: 8.0,
@@ -274,6 +367,7 @@ export const MenuManagerModal: React.FC<MenuManagerModalProps> = ({
 
   const handleExportJson = () => {
     const exportData = {
+      categories,
       products,
       combos,
       exportedAt: new Date().toISOString(),
@@ -299,6 +393,7 @@ export const MenuManagerModal: React.FC<MenuManagerModalProps> = ({
       onImportCatalog({
         products: parsed.products,
         combos: Array.isArray(parsed.combos) ? parsed.combos : combos,
+        categories: Array.isArray(parsed.categories) ? parsed.categories : categories,
       });
       showToast('Cardápio importado com sucesso!');
       setImportJsonText('');
@@ -355,9 +450,9 @@ export const MenuManagerModal: React.FC<MenuManagerModalProps> = ({
         {/* Navigation Tabs & Primary Actions Bar */}
         <div className="bg-stone-50/80 px-4 sm:px-6 py-2.5 border-b border-stone-200/70 flex flex-wrap items-center justify-between gap-3 shrink-0">
           {/* Tabs */}
-          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-stone-200/80 shadow-xs">
+          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-stone-200/80 shadow-xs flex-wrap">
             <button
-              onClick={() => { setActiveTab('sabores'); setEditingProduct(null); setEditingCombo(null); }}
+              onClick={() => { setActiveTab('sabores'); setEditingProduct(null); setEditingCombo(null); setEditingCategory(null); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                 activeTab === 'sabores'
                   ? 'bg-stone-900 text-white shadow-xs'
@@ -371,7 +466,22 @@ export const MenuManagerModal: React.FC<MenuManagerModalProps> = ({
             </button>
 
             <button
-              onClick={() => { setActiveTab('combos'); setEditingProduct(null); setEditingCombo(null); }}
+              onClick={() => { setActiveTab('categorias'); setEditingProduct(null); setEditingCombo(null); setEditingCategory(null); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'categorias'
+                  ? 'bg-stone-900 text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-50'
+              }`}
+            >
+              <FolderTree className="w-3.5 h-3.5" />
+              <span>Categorias</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${activeTab === 'categorias' ? 'bg-white/20 text-white' : 'bg-stone-100 text-stone-600'}`}>
+                {categories.filter(c => c.id !== 'todos').length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('combos'); setEditingProduct(null); setEditingCombo(null); setEditingCategory(null); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                 activeTab === 'combos'
                   ? 'bg-stone-900 text-white shadow-xs'
@@ -386,7 +496,7 @@ export const MenuManagerModal: React.FC<MenuManagerModalProps> = ({
             </button>
 
             <button
-              onClick={() => { setActiveTab('estoque'); setEditingProduct(null); setEditingCombo(null); }}
+              onClick={() => { setActiveTab('estoque'); setEditingProduct(null); setEditingCombo(null); setEditingCategory(null); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                 activeTab === 'estoque'
                   ? 'bg-stone-900 text-white shadow-xs'
@@ -403,7 +513,7 @@ export const MenuManagerModal: React.FC<MenuManagerModalProps> = ({
             </button>
 
             <button
-              onClick={() => { setActiveTab('metricas'); setEditingProduct(null); setEditingCombo(null); }}
+              onClick={() => { setActiveTab('metricas'); setEditingProduct(null); setEditingCombo(null); setEditingCategory(null); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                 activeTab === 'metricas'
                   ? 'bg-stone-900 text-white shadow-xs'
@@ -415,7 +525,7 @@ export const MenuManagerModal: React.FC<MenuManagerModalProps> = ({
             </button>
 
             <button
-              onClick={() => { setActiveTab('backup'); setEditingProduct(null); setEditingCombo(null); }}
+              onClick={() => { setActiveTab('backup'); setEditingProduct(null); setEditingCombo(null); setEditingCategory(null); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                 activeTab === 'backup'
                   ? 'bg-stone-900 text-white shadow-xs'
@@ -436,6 +546,16 @@ export const MenuManagerModal: React.FC<MenuManagerModalProps> = ({
               >
                 <Plus className="w-4 h-4" />
                 <span>Novo Sabor</span>
+              </button>
+            )}
+
+            {activeTab === 'categorias' && (
+              <button
+                onClick={handleOpenNewCategory}
+                className="px-3.5 py-1.5 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl shadow-xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nova Categoria</span>
               </button>
             )}
 
@@ -489,9 +609,9 @@ export const MenuManagerModal: React.FC<MenuManagerModalProps> = ({
                     className="w-full bg-white border border-stone-200 rounded-xl px-3 py-1.5 text-xs font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
                   >
                     <option value="todos">Todas as Categorias ({products.length})</option>
-                    {CATEGORIES_DATA.filter(c => c.id !== 'todos').map((cat) => (
+                    {categories.filter(c => c.id !== 'todos').map((cat) => (
                       <option key={cat.id} value={cat.id}>
-                        {cat.label} ({products.filter(p => p.category === cat.id).length})
+                        {cat.icon ? `${cat.icon} ` : ''}{cat.label} ({products.filter(p => p.category === cat.id).length})
                       </option>
                     ))}
                   </select>

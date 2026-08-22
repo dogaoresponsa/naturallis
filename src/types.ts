@@ -1,16 +1,18 @@
-export type ProductCategory = 
-  | 'todos'
-  | 'chocolatudos'
-  | 'frutas-ninho'
-  | 'classicos-cremosos'
-  | 'premium-especiais'
-  | 'fit-zero'
-  | 'alcoolicos';
+export interface CategoryItem {
+  id: string; // unique slug e.g. 'frutas-ninho', 'cremosos', 'especiais'
+  label: string; // Display name e.g. 'Frutas com Ninho'
+  icon?: string; // Icon or emoji identifier
+  color?: string; // Optional color theme class or gradient
+  description?: string;
+  order?: number;
+}
+
+export type ProductCategory = string;
 
 export interface GeladinhoProduct {
   id: string;
   name: string;
-  category: 'chocolatudos' | 'frutas-ninho' | 'classicos-cremosos' | 'premium-especiais' | 'fit-zero' | 'alcoolicos';
+  category: string;
   tagline: string;
   description: string;
   price: number;
