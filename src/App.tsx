@@ -66,6 +66,7 @@ import {
   CartItem, 
   CartComboItem, 
   ProductCategory, 
+  CategoryItem,
   StoreSettings,
   OrderRecord,
   OrderStatus,
@@ -75,6 +76,7 @@ import {
 import { 
   PRODUCTS_DATA, 
   PROMO_COMBOS_DATA, 
+  DEFAULT_CATEGORIES_DATA,
   DEFAULT_STORE_SETTINGS 
 } from './data/products';
 
@@ -86,6 +88,15 @@ export default function App() {
       return saved ? JSON.parse(saved) : DEFAULT_STORE_SETTINGS;
     } catch {
       return DEFAULT_STORE_SETTINGS;
+    }
+  });
+
+  const [categories, setCategories] = useState<CategoryItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('geladinhos_categories');
+      return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES_DATA;
+    } catch {
+      return DEFAULT_CATEGORIES_DATA;
     }
   });
 
@@ -397,6 +408,10 @@ export default function App() {
     localStorage.setItem('geladinhos_favorites', JSON.stringify(favorites));
   }, [favorites]);
 
+  useEffect(() => {
+    localStorage.setItem('geladinhos_categories', JSON.stringify(categories));
+  }, [categories]);
+
   // Cart calculations
   const totalCartCount = useMemo(() => {
     const itemsCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
@@ -616,19 +631,52 @@ export default function App() {
     setCombos((prev) => [cloned, ...prev]);
   };
 
+  const handleSaveCategory = (cat: CategoryItem) => {
+    setCategories((prev) => {
+      const idx = prev.findIndex((c) => c.id === cat.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = cat;
+        return updated;
+      }
+      return [...prev, cat];
+    });
+  };
+
+  const handleDeleteCategory = (categoryId: string, reassignTo?: string) => {
+    setCategories((prev) => prev.filter((c) => c.id !== categoryId));
+    if (reassignTo) {
+      setProducts((prev) =>
+        prev.map((p) => (p.category === categoryId ? { ...p, category: reassignTo } : p))
+      );
+    }
+    if (activeCategory === categoryId) {
+      setActiveCategory('todos');
+    }
+  };
+
+  const handleReorderCategories = (newCategories: CategoryItem[]) => {
+    setCategories(newCategories);
+  };
+
   const handleResetCatalogDefaults = () => {
     setProducts(PRODUCTS_DATA);
     setCombos(PROMO_COMBOS_DATA);
+    setCategories(DEFAULT_CATEGORIES_DATA);
     localStorage.removeItem('geladinhos_products');
     localStorage.removeItem('geladinhos_combos');
+    localStorage.removeItem('geladinhos_categories');
   };
 
-  const handleImportCatalog = (data: { products: GeladinhoProduct[]; combos: PromoCombo[] }) => {
+  const handleImportCatalog = (data: { products: GeladinhoProduct[]; combos: PromoCombo[]; categories?: CategoryItem[] }) => {
     if (Array.isArray(data.products) && data.products.length > 0) {
       setProducts(data.products);
     }
     if (Array.isArray(data.combos) && data.combos.length > 0) {
       setCombos(data.combos);
+    }
+    if (Array.isArray(data.categories) && data.categories.length > 0) {
+      setCategories(data.categories);
     }
   };
 
@@ -1096,6 +1144,7 @@ export default function App() {
 
         {/* Categories & Filter controls */}
         <CategoryFilter
+          categories={categories}
           activeCategory={activeCategory}
           onSelectCategory={setActiveCategory}
           searchQuery={searchQuery}
@@ -1207,6 +1256,7 @@ export default function App() {
         onClose={() => setIsMenuManagerOpen(false)}
         products={products}
         combos={combos}
+        categories={categories}
         stockMovements={stockMovements}
         onSaveProduct={handleSaveProduct}
         onDeleteProduct={handleDeleteProduct}
@@ -1220,6 +1270,9 @@ export default function App() {
         onSaveCombo={handleSaveCombo}
         onDeleteCombo={handleDeleteCombo}
         onDuplicateCombo={handleDuplicateCombo}
+        onSaveCategory={handleSaveCategory}
+        onDeleteCategory={handleDeleteCategory}
+        onReorderCategories={handleReorderCategories}
         onResetToDefaults={handleResetCatalogDefaults}
         onImportCatalog={handleImportCatalog}
       />
